@@ -10,6 +10,23 @@ Breaking changes can land on any minor bump (`0.x.0`) until
 
 ## [Unreleased]
 
+## [0.0.3] - 2026-05-09
+
+### Changed
+- `local.rune_login_command` (output `rune_login_command`) now emits
+  `--default-namespace` instead of `--namespace`. The `--namespace`
+  flag on `rune login` was overloaded with the per-operation
+  `--namespace` flag used everywhere else in the CLI; the new flag
+  name reflects that this value is *stored* in the saved context as
+  the default for future commands, not the target of the login.
+
+### Compatibility
+- Requires Rune CLI ≥ `v0.0.1-dev.23` on the operator's machine
+  (the version that introduces `--default-namespace`). Older CLIs
+  will reject the unknown flag. The deprecated `--namespace` alias
+  remains accepted by the new CLI for one release; if you must
+  support an older operator CLI, pin this module to `0.0.2`.
+
 ## [0.0.2] - 2026-05-09
 
 ### Changed
@@ -36,6 +53,7 @@ Breaking changes can land on any minor bump (`0.x.0`) until
   ready-to-paste `rune login` command.
 - Examples: `minimal`, `edge-with-tls`, `with-bootstrap`.
 
-[Unreleased]: https://github.com/runestack/terraform-digitalocean-rune/compare/v0.0.2...HEAD
+[Unreleased]: https://github.com/runestack/terraform-digitalocean-rune/compare/v0.0.3...HEAD
+[0.0.3]: https://github.com/runestack/terraform-digitalocean-rune/releases/tag/v0.0.3
 [0.0.2]: https://github.com/runestack/terraform-digitalocean-rune/releases/tag/v0.0.2
 [0.0.1]: https://github.com/runestack/terraform-digitalocean-rune/releases/tag/v0.0.1

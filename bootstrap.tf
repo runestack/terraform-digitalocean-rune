@@ -24,7 +24,7 @@ locals {
   bootstrap_context = var.bootstrap_context_name != "" ? var.bootstrap_context_name : "rune-${var.environment}"
 
   rune_login_command = format(
-    "rune login %s --server %s:%d --token-file %s --namespace %s",
+    "rune login %s --server %s:%d --token-file %s --default-namespace %s",
     local.bootstrap_context,
     digitalocean_droplet.this.ipv4_address,
     var.grpc_port,
