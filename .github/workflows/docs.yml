@@ -8,10 +8,13 @@ on:
 jobs:
   terraform-docs:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
       - uses: terraform-docs/gh-actions@v1
         with:
           working-dir: .
