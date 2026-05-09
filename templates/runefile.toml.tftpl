@@ -1,0 +1,23 @@
+data_dir = "/var/lib/rune"
+
+[server]
+grpc_address = "${grpc_address}"
+http_address = "${http_address}"
+
+[log]
+level  = "${log_level}"
+format = "${log_format}"
+
+[networking]
+cluster_cidr = "${cluster_cidr}"
+
+[telemetry]
+metrics_addr = "${metrics_addr}"
+
+[node]
+role = "${node_role}"
+%{ if acme_email != "" ~}
+
+[acme]
+email = "${acme_email}"
+%{ endif ~}

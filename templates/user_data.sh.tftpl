@@ -1,0 +1,60 @@
+#!/bin/bash
+# Cloud-init for Rune on Ubuntu/Debian. Runs once per droplet.
+# Logs land in /var/log/user-data.log for post-mortem.
+set -euo pipefail
+
+exec > >(tee -a /var/log/user-data.log) 2>&1
+
+echo "[rune] cloud-init starting at $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+if ! command -v curl >/dev/null 2>&1; then
+  apt-get update -y -qq
+  apt-get install -y -qq curl ca-certificates
+fi
+
+# Install runed via the upstream installer. Pinned via rune_version
+# so this is reproducible across applies.
+curl -fsSL https://raw.githubusercontent.com/runestack/rune/master/scripts/install-server.sh \
+  | bash -s -- --version "${rune_version}"
+
+# Allow runed to bind low ports (80/443) for the edge ingress
+# without running as root.
+setcap 'cap_net_bind_service=+ep' /usr/local/bin/runed || true
+
+# Replace systemd-resolved stub with real resolvers so rune's DNS
+# doesn't trip over the loopback stub.
+cat > /etc/resolv.conf <<'RESOLV'
+nameserver 67.207.67.3
+nameserver 67.207.67.2
+options edns0 trust-ad
+RESOLV
+
+# Drop the rendered runefile.
+mkdir -p /etc/rune
+cat > /etc/rune/runefile.toml <<'RUNEFILE'
+${runefile}
+RUNEFILE
+
+# systemd unit pointing at the rendered config.
+cat > /etc/systemd/system/runed.service <<'UNIT'
+[Unit]
+Description=Rune Server
+After=network-online.target docker.service
+Wants=network-online.target docker.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/runed --config /etc/rune/runefile.toml
+Restart=on-failure
+RestartSec=5s
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+
+systemctl daemon-reload
+systemctl enable runed
+systemctl restart runed
+
+echo "[rune] cloud-init complete; runed managed by systemd"
