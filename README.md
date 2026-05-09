@@ -29,7 +29,7 @@ optional one-shot admin bootstrap.
 ```hcl
 module "rune" {
   source  = "runestack/rune/digitalocean"
-  version = "~> 0.1"
+  version = "0.0.2"
 
   ssh_key_ids = [data.digitalocean_ssh_key.main.id]
 

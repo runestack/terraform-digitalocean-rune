@@ -30,7 +30,7 @@ module "rune" {
   acme_email = var.acme_email
 
   bootstrap                 = true
-  bootstrap_ssh_private_key = file(var.ssh_private_key_path)
+  bootstrap_ssh_private_key = var.ssh_private_key
   bootstrap_token_path      = "${path.cwd}/rune-admin.token"
   bootstrap_namespace       = "default"
 }

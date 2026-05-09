@@ -4,11 +4,15 @@
 export TF_VAR_do_token="dop_v1_..."
 export TF_VAR_ssh_key_name="my-laptop"
 export TF_VAR_acme_email="ops@example.com"
-# (optional) export TF_VAR_ssh_private_key_path="$HOME/.ssh/id_ed25519"
+export TF_VAR_ssh_private_key="$(cat ~/.ssh/id_ed25519)"
 
 terraform init
 terraform apply
 ```
+
+`ssh_private_key` is the PEM contents themselves — passed in
+directly so the example stays evaluable by `tflint` and other
+static checkers (which can't read files outside the config).
 
 When apply finishes:
 
