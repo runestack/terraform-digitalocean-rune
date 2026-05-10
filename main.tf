@@ -22,14 +22,15 @@ locals {
   })
 
   runefile = templatefile("${path.module}/templates/runefile.toml.tftpl", {
-    grpc_address = ":${var.grpc_port}"
-    http_address = ":${var.http_port}"
-    cluster_cidr = var.cluster_cidr
-    node_role    = var.node_role
-    log_level    = var.log_level
-    log_format   = var.log_format
-    metrics_addr = var.metrics_addr
-    acme_email   = var.acme_email
+    grpc_address      = ":${var.grpc_port}"
+    http_address      = ":${var.http_port}"
+    cluster_cidr      = var.cluster_cidr
+    node_role         = var.node_role
+    log_level         = var.log_level
+    log_format        = var.log_format
+    metrics_addr      = var.metrics_addr
+    acme_email        = var.acme_email
+    docker_registries = var.docker_registries
   })
 }
 

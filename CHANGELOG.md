@@ -10,6 +10,27 @@ Breaking changes can land on any minor bump (`0.x.0`) until
 
 ## [Unreleased]
 
+## [0.0.4] - 2026-05-10
+
+### Added
+- `var.docker_registries` — list of registry credentials rendered
+  into `[[docker.registries]]` blocks in `runefile.toml`. Supports
+  `auth_type = "basic"` (username + password / GHCR PAT),
+  `"token"` (long-lived bearer), and `"ecr"` (AWS region; runed
+  mints short-lived tokens at pull time). Closes the gap that
+  forced operators to SSH in and run `rune admin registry add`
+  after every apply, or to ship credentials out-of-band.
+
+### Changed
+- `var.rune_version` default bumped from `v0.0.1-dev.22` to
+  `v0.0.1-dev.32`. Pulls in: per-RPC CLI deadlines (no more
+  hung `rune whoami`), gRPC + OTel security bumps, the
+  ListInstances filter fix (so `rune get service <name>` shows
+  instances again), the install-server.sh runefile-placement
+  fix (canonical `/etc/rune/runefile.toml` + explicit `--config`
+  flag), and CreateToken policy validation (so `--policy <typo>`
+  fails fast instead of silently issuing a useless token).
+
 ## [0.0.3] - 2026-05-09
 
 ### Changed
@@ -53,7 +74,8 @@ Breaking changes can land on any minor bump (`0.x.0`) until
   ready-to-paste `rune login` command.
 - Examples: `minimal`, `edge-with-tls`, `with-bootstrap`.
 
-[Unreleased]: https://github.com/runestack/terraform-digitalocean-rune/compare/v0.0.3...HEAD
+[Unreleased]: https://github.com/runestack/terraform-digitalocean-rune/compare/v0.0.4...HEAD
+[0.0.4]: https://github.com/runestack/terraform-digitalocean-rune/releases/tag/v0.0.4
 [0.0.3]: https://github.com/runestack/terraform-digitalocean-rune/releases/tag/v0.0.3
 [0.0.2]: https://github.com/runestack/terraform-digitalocean-rune/releases/tag/v0.0.2
 [0.0.1]: https://github.com/runestack/terraform-digitalocean-rune/releases/tag/v0.0.1

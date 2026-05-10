@@ -113,8 +113,8 @@ variable "extra_inbound_tcp_ports" {
 
 variable "rune_version" {
   type        = string
-  description = "Rune release tag passed to install-server.sh (e.g. 'v0.0.1-dev.22'). Pinned by default for reproducibility; bump per module release."
-  default     = "v0.0.1-dev.22"
+  description = "Rune release tag passed to install-server.sh (e.g. 'v0.0.1-dev.32'). Pinned by default for reproducibility; bump per module release."
+  default     = "v0.0.1-dev.32"
 }
 
 # ---------------------------------------------------------------
@@ -174,6 +174,71 @@ variable "acme_email" {
   validation {
     condition     = var.acme_email == "" || can(regex("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$", var.acme_email))
     error_message = "acme_email must be a valid email address or empty."
+  }
+}
+
+# ---------------------------------------------------------------
+# Docker registry credentials (rendered into [[docker.registries]])
+#
+# Each entry maps to one block in the runefile. `password` and
+# `token` are sensitive — pass them via TF_VAR_* or a sensitive
+# secret store, never commit them. The most common entry shape is
+# a GHCR PAT:
+#
+#   docker_registries = [
+#     {
+#       name     = "ghcr"
+#       registry = "ghcr.io"
+#       username = "my-github-user"
+#       password = var.ghcr_pat   # sensitive
+#     }
+#   ]
+#
+# For ECR pass auth_type = "ecr" with the AWS region; runed will
+# use its instance role / env credentials to mint short-lived
+# tokens. For long-lived bearer tokens use auth_type = "token"
+# with the `token` field instead of username/password.
+# ---------------------------------------------------------------
+
+variable "docker_registries" {
+  type = list(object({
+    name      = string
+    registry  = string
+    auth_type = optional(string, "basic")
+    username  = optional(string, "")
+    password  = optional(string, "")
+    token     = optional(string, "")
+    region    = optional(string, "")
+  }))
+  description = "Private Docker registries rendered into [[docker.registries]] in runefile.toml. Use auth_type = 'basic' (username + password / PAT), 'token' (bearer), or 'ecr' (AWS region). Passwords and tokens are passed through Terraform state — gate access accordingly."
+  default     = []
+  sensitive   = true
+  validation {
+    condition = alltrue([
+      for r in var.docker_registries : contains(["basic", "token", "ecr"], r.auth_type)
+    ])
+    error_message = "Each docker_registries[*].auth_type must be 'basic', 'token', or 'ecr'."
+  }
+  validation {
+    condition = alltrue([
+      for r in var.docker_registries :
+      r.auth_type != "basic" || (r.username != "" && r.password != "")
+    ])
+    error_message = "docker_registries entries with auth_type = 'basic' require both username and password."
+  }
+  validation {
+    condition = alltrue([
+      for r in var.docker_registries :
+      r.auth_type != "token" || r.token != ""
+    ])
+    error_message = "docker_registries entries with auth_type = 'token' require a non-empty token."
+  }
+  validation {
+    condition = alltrue([
+      for r in var.docker_registries :
+      r.auth_type != "ecr" || r.region != ""
+    ])
+    error_message = "docker_registries entries with auth_type = 'ecr' require an AWS region."
   }
 }
 

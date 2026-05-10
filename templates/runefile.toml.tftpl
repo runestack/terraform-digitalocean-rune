@@ -21,3 +21,22 @@ role = "${node_role}"
 [acme]
 email = "${acme_email}"
 %{ endif ~}
+%{ for r in docker_registries ~}
+
+[[docker.registries]]
+name     = "${r.name}"
+registry = "${r.registry}"
+
+  [docker.registries.auth]
+  type = "${r.auth_type}"
+%{ if r.auth_type == "basic" ~}
+  username = "${r.username}"
+  password = "${r.password}"
+%{ endif ~}
+%{ if r.auth_type == "token" ~}
+  token = "${r.token}"
+%{ endif ~}
+%{ if r.auth_type == "ecr" ~}
+  region = "${r.region}"
+%{ endif ~}
+%{ endfor ~}
