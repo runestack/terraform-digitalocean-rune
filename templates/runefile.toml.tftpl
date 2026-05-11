@@ -28,7 +28,6 @@ name     = "${r.name}"
 registry = "${r.registry}"
 
   [docker.registries.auth]
-  type = "${r.auth_type}"
 %{ if r.from_secret != "" ~}
 %{ if r.from_secret_namespace != "" ~}
   fromSecret = { name = "${r.from_secret}", namespace = "${r.from_secret_namespace}" }
@@ -55,6 +54,7 @@ registry = "${r.registry}"
 %{ endfor ~}
 %{ endif ~}
 %{ else ~}
+  type = "${r.auth_type}"
 %{ if r.auth_type == "basic" ~}
   username = "${r.username}"
   password = "${r.password}"

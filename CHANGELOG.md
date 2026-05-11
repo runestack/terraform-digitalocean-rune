@@ -20,17 +20,29 @@ Breaking changes can land on any minor bump (`0.x.0`) until
   updates the Secret on first start using env-expanded values
   (RUNE-018 secret-bootstrap mode), so PATs and tokens never
   land in the runefile or in Terraform state as cleartext config.
+  Once a fromSecret is set, runed infers the auth type from the
+  secret's data keys (username+password → basic, token → bearer,
+  .dockerconfigjson → docker config JSON, awsAccessKeyId+… →
+  ECR), so omit `auth_type` and inline credentials in that mode.
 - `var.runed_environment` (sensitive map) — written to
   `/etc/rune/runed.env` (mode 0600) and consumed by the `runed`
   systemd unit via `EnvironmentFile=`. Used to supply env-backed
   values for `bootstrap` registry data (e.g. `GHCR_PAT`) and any
   other `${ENV}` references inside the runefile.
+- Two new plan-time validations on `docker_registries`:
+  inline `username`/`password`/`token` may not coexist with
+  `from_secret` (would be silently ignored by runed); and
+  `data = { ... }` requires `bootstrap = true` (data is the
+  bootstrap seed and is ignored at runtime).
 
 ### Changed
 - `runed.service` written by cloud-init now declares
   `EnvironmentFile=-/etc/rune/runed.env` (the leading `-` makes it
   optional, so existing applies without `runed_environment` keep
   working). The runefile is also `chmod 600` after rendering.
+- `runefile.toml.tftpl` no longer renders `auth.type` when
+  `from_secret` is set — runed will overwrite it from the
+  secret's keys anyway, so emitting it was misleading.
 - `examples/with-bootstrap` demonstrates GHCR credentials stored
   as a Rune Secret via the new `from_secret` + `bootstrap` flow.
 
