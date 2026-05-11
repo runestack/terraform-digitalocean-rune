@@ -10,6 +10,30 @@ Breaking changes can land on any minor bump (`0.x.0`) until
 
 ## [Unreleased]
 
+### Added
+- `var.docker_registries[*]` gained `from_secret`,
+  `from_secret_namespace`, `bootstrap`, `manage`, `immutable`,
+  and `data` fields. Setting `from_secret` makes the rendered
+  runefile reference an encrypted Rune Secret instead of
+  embedding plaintext credentials. Combined with
+  `bootstrap = true` + a `data = { ... }` map, runed creates or
+  updates the Secret on first start using env-expanded values
+  (RUNE-018 secret-bootstrap mode), so PATs and tokens never
+  land in the runefile or in Terraform state as cleartext config.
+- `var.runed_environment` (sensitive map) — written to
+  `/etc/rune/runed.env` (mode 0600) and consumed by the `runed`
+  systemd unit via `EnvironmentFile=`. Used to supply env-backed
+  values for `bootstrap` registry data (e.g. `GHCR_PAT`) and any
+  other `${ENV}` references inside the runefile.
+
+### Changed
+- `runed.service` written by cloud-init now declares
+  `EnvironmentFile=-/etc/rune/runed.env` (the leading `-` makes it
+  optional, so existing applies without `runed_environment` keep
+  working). The runefile is also `chmod 600` after rendering.
+- `examples/with-bootstrap` demonstrates GHCR credentials stored
+  as a Rune Secret via the new `from_secret` + `bootstrap` flow.
+
 ## [0.0.4] - 2026-05-10
 
 ### Added
