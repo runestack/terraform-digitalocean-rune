@@ -17,3 +17,21 @@ variable "ssh_private_key" {
 variable "acme_email" {
   type = string
 }
+
+# ---------------------------------------------------------------
+# Optional: GHCR credentials, stored as an encrypted Rune Secret.
+# Leave empty to skip the registry-via-secret demo.
+# ---------------------------------------------------------------
+
+variable "ghcr_username" {
+  type        = string
+  description = "GitHub username paired with ghcr_pat. Leave empty to skip the GHCR demo."
+  default     = ""
+}
+
+variable "ghcr_pat" {
+  type        = string
+  description = "GitHub Personal Access Token with read:packages. Sensitive."
+  default     = ""
+  sensitive   = true
+}

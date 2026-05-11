@@ -180,19 +180,49 @@ variable "acme_email" {
 # ---------------------------------------------------------------
 # Docker registry credentials (rendered into [[docker.registries]])
 #
-# Each entry maps to one block in the runefile. `password` and
-# `token` are sensitive — pass them via TF_VAR_* or a sensitive
-# secret store, never commit them. The most common entry shape is
-# a GHCR PAT:
+# Each entry maps to one block in the runefile. Two shapes are
+# supported:
 #
-#   docker_registries = [
-#     {
-#       name     = "ghcr"
-#       registry = "ghcr.io"
-#       username = "my-github-user"
-#       password = var.ghcr_pat   # sensitive
-#     }
-#   ]
+#   1) Inline credentials (rendered as plaintext into the runefile).
+#      Simplest, but the credential lives in TF state + on the
+#      droplet's filesystem.
+#
+#        docker_registries = [
+#          {
+#            name     = "ghcr"
+#            registry = "ghcr.io"
+#            username = "my-github-user"
+#            password = var.ghcr_pat   # sensitive
+#          }
+#        ]
+#
+#   2) Stored as an encrypted Rune Secret (`fromSecret` reference).
+#      The runefile carries only the secret name; runed loads the
+#      cipher‑text from its Secret store at pull time.
+#
+#      Bootstrap mode (`bootstrap = true` + `data = { ... }`) lets
+#      runed create the Secret on first start using env‑expanded
+#      values. The env values reach runed via the EnvironmentFile
+#      written from `var.runed_environment` (see below).
+#
+#        docker_registries = [
+#          {
+#            name        = "ghcr"
+#            registry    = "ghcr.io"
+#            from_secret = "ghcr-credentials"   # ns defaults to "system"
+#            bootstrap   = true                  # create-or-update on startup
+#            manage      = "update"              # create | update | ignore
+#            immutable   = false
+#            data = {
+#              username = "$${GHCR_USERNAME}"
+#              password = "$${GHCR_PAT}"
+#            }
+#          }
+#        ]
+#        runed_environment = {
+#          GHCR_USERNAME = var.ghcr_username
+#          GHCR_PAT      = var.ghcr_pat   # sensitive
+#        }
 #
 # For ECR pass auth_type = "ecr" with the AWS region; runed will
 # use its instance role / env credentials to mint short-lived
@@ -209,8 +239,18 @@ variable "docker_registries" {
     password  = optional(string, "")
     token     = optional(string, "")
     region    = optional(string, "")
+
+    # fromSecret mode (RUNE-018). When from_secret is non-empty the
+    # inline username/password/token fields are ignored; runed loads
+    # credentials from the named Rune Secret instead.
+    from_secret           = optional(string, "")
+    from_secret_namespace = optional(string, "")
+    bootstrap             = optional(bool, false)
+    manage                = optional(string, "")
+    immutable             = optional(bool, false)
+    data                  = optional(map(string), {})
   }))
-  description = "Private Docker registries rendered into [[docker.registries]] in runefile.toml. Use auth_type = 'basic' (username + password / PAT), 'token' (bearer), or 'ecr' (AWS region). Passwords and tokens are passed through Terraform state — gate access accordingly."
+  description = "Private Docker registries rendered into [[docker.registries]] in runefile.toml. Use auth_type = 'basic' (username + password / PAT), 'token' (bearer), or 'ecr' (AWS region). Set from_secret to load credentials from an encrypted Rune Secret instead of embedding them in the runefile; combine with bootstrap = true + data = { ... } to have runed create/update the Secret on first start using env-expanded values supplied via var.runed_environment."
   default     = []
   sensitive   = true
   validation {
@@ -222,16 +262,16 @@ variable "docker_registries" {
   validation {
     condition = alltrue([
       for r in var.docker_registries :
-      r.auth_type != "basic" || (r.username != "" && r.password != "")
+      r.auth_type != "basic" || r.from_secret != "" || (r.username != "" && r.password != "")
     ])
-    error_message = "docker_registries entries with auth_type = 'basic' require both username and password."
+    error_message = "docker_registries entries with auth_type = 'basic' require either from_secret or both username and password."
   }
   validation {
     condition = alltrue([
       for r in var.docker_registries :
-      r.auth_type != "token" || r.token != ""
+      r.auth_type != "token" || r.from_secret != "" || r.token != ""
     ])
-    error_message = "docker_registries entries with auth_type = 'token' require a non-empty token."
+    error_message = "docker_registries entries with auth_type = 'token' require either from_secret or a non-empty token."
   }
   validation {
     condition = alltrue([
@@ -240,6 +280,34 @@ variable "docker_registries" {
     ])
     error_message = "docker_registries entries with auth_type = 'ecr' require an AWS region."
   }
+  validation {
+    condition = alltrue([
+      for r in var.docker_registries :
+      r.manage == "" || contains(["create", "update", "ignore"], r.manage)
+    ])
+    error_message = "docker_registries[*].manage must be one of 'create', 'update', 'ignore' (or empty for the default)."
+  }
+  validation {
+    condition = alltrue([
+      for r in var.docker_registries :
+      !r.bootstrap || (r.from_secret != "" && length(r.data) > 0)
+    ])
+    error_message = "docker_registries entries with bootstrap = true require both from_secret and a non-empty data map."
+  }
+  validation {
+    condition = alltrue([
+      for r in var.docker_registries :
+      r.from_secret != "" || r.from_secret_namespace == ""
+    ])
+    error_message = "docker_registries[*].from_secret_namespace can only be set when from_secret is also set."
+  }
+}
+
+variable "runed_environment" {
+  type        = map(string)
+  description = "Environment variables exported to the runed process via /etc/rune/runed.env (referenced by the systemd unit's EnvironmentFile). Use for secrets consumed by runefile bootstrap blocks (e.g. GHCR_PAT for a registry's bootstrap data map). Pass via TF_VAR_runed_environment or a sensitive tfvars file; values are written to the droplet's filesystem with mode 0600."
+  default     = {}
+  sensitive   = true
 }
 
 # ---------------------------------------------------------------

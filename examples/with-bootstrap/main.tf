@@ -19,6 +19,11 @@ data "digitalocean_ssh_key" "main" {
 # Edge node + auto-bootstrap. After `terraform apply`, the admin
 # token is on disk and `terraform output rune_login_command` prints
 # a ready-to-paste login.
+#
+# When ghcr_username + ghcr_pat are set, runed will create an
+# encrypted `ghcr-credentials` Rune Secret in the `system`
+# namespace on first start (the runefile only carries a fromSecret
+# reference, never the PAT itself).
 module "rune" {
   source = "../.."
 
@@ -33,6 +38,26 @@ module "rune" {
   bootstrap_ssh_private_key = var.ssh_private_key
   bootstrap_token_path      = "${path.cwd}/rune-admin.token"
   bootstrap_namespace       = "default"
+
+  docker_registries = var.ghcr_username == "" ? [] : [
+    {
+      name        = "ghcr"
+      registry    = "ghcr.io"
+      auth_type   = "basic"
+      from_secret = "ghcr-credentials"
+      bootstrap   = true
+      manage      = "update"
+      data = {
+        username = "$${GHCR_USERNAME}"
+        password = "$${GHCR_PAT}"
+      }
+    }
+  ]
+
+  runed_environment = var.ghcr_username == "" ? {} : {
+    GHCR_USERNAME = var.ghcr_username
+    GHCR_PAT      = var.ghcr_pat
+  }
 }
 
 output "ipv4_address" { value = module.rune.ipv4_address }

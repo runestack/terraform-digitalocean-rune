@@ -29,6 +29,32 @@ registry = "${r.registry}"
 
   [docker.registries.auth]
   type = "${r.auth_type}"
+%{ if r.from_secret != "" ~}
+%{ if r.from_secret_namespace != "" ~}
+  fromSecret = { name = "${r.from_secret}", namespace = "${r.from_secret_namespace}" }
+%{ else ~}
+  fromSecret = "${r.from_secret}"
+%{ endif ~}
+%{ if r.bootstrap ~}
+  bootstrap = true
+%{ endif ~}
+%{ if r.manage != "" ~}
+  manage = "${r.manage}"
+%{ endif ~}
+%{ if r.immutable ~}
+  immutable = true
+%{ endif ~}
+%{ if r.auth_type == "ecr" && r.region != "" ~}
+  region = "${r.region}"
+%{ endif ~}
+%{ if length(r.data) > 0 ~}
+
+  [docker.registries.auth.data]
+%{ for k, v in r.data ~}
+  ${k} = "${v}"
+%{ endfor ~}
+%{ endif ~}
+%{ else ~}
 %{ if r.auth_type == "basic" ~}
   username = "${r.username}"
   password = "${r.password}"
@@ -38,5 +64,6 @@ registry = "${r.registry}"
 %{ endif ~}
 %{ if r.auth_type == "ecr" ~}
   region = "${r.region}"
+%{ endif ~}
 %{ endif ~}
 %{ endfor ~}

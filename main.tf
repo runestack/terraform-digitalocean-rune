@@ -13,12 +13,23 @@
 locals {
   name = "rune-${var.environment}"
 
+  # Sorted KEY=VALUE lines for /etc/rune/runed.env. Sorting keeps
+  # the rendered user_data stable across applies when var iteration
+  # order differs. Values are written verbatim — no quoting — to
+  # match systemd EnvironmentFile parsing rules; callers must not
+  # include literal newlines in values.
+  runed_env_file = join("\n", [
+    for k in sort(keys(var.runed_environment)) :
+    "${k}=${var.runed_environment[k]}"
+  ])
+
   # The user_data script is rendered with module inputs. Cloud-init
   # is at-most-once: changing user_data does NOT re-run on existing
   # droplets, so changes here only take effect on a fresh apply.
   user_data = templatefile("${path.module}/templates/user_data.sh.tftpl", {
-    rune_version = var.rune_version
-    runefile     = local.runefile
+    rune_version      = var.rune_version
+    runefile          = local.runefile
+    runed_environment = local.runed_env_file
   })
 
   runefile = templatefile("${path.module}/templates/runefile.toml.tftpl", {
