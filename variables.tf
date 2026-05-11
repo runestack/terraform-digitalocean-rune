@@ -113,8 +113,8 @@ variable "extra_inbound_tcp_ports" {
 
 variable "rune_version" {
   type        = string
-  description = "Rune release tag passed to install-server.sh (e.g. 'v0.0.1-dev.32'). Pinned by default for reproducibility; bump per module release."
-  default     = "v0.0.1-dev.32"
+  description = "Rune release tag passed to install-server.sh (e.g. 'v0.0.1-dev.35'). Pinned by default for reproducibility; bump per module release."
+  default     = "v0.0.1-dev.35"
 }
 
 # ---------------------------------------------------------------

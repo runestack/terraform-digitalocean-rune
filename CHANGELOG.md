@@ -10,7 +10,14 @@ Breaking changes can land on any minor bump (`0.x.0`) until
 
 ## [Unreleased]
 
+## [0.0.5] - 2026-05-11
+
 ### Added
+- Bump default `rune_version` to `v0.0.1-dev.35` (RUNE-111/112/113 +
+  RUNE-105 cast-templating + Config schema completion). The
+  rendered runefile is now lint-clean against `rune lint
+  /etc/rune/runefile.toml`, including `docker.registries[*].auth`
+  with `fromSecret` / `bootstrap` / `manage` / `data`.
 - `var.docker_registries[*]` gained `from_secret`,
   `from_secret_namespace`, `bootstrap`, `manage`, `immutable`,
   and `data` fields. Setting `from_secret` makes the rendered
