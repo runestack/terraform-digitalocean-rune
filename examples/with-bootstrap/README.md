@@ -40,18 +40,35 @@ in the `system` namespace, encrypts it under the per-secret DEK,
 and uses it for image pulls. No PAT is ever written to the
 runefile itself.
 
+`runed` infers the auth type from the secret's data keys (see
+`resolveRegistrySecret`): `username + password` → basic,
+`token` → bearer, `.dockerconfigjson` → docker config JSON,
+`awsAccessKeyId + …` → ECR. So once the secret exists, the
+`auth.data` block in the runefile is irrelevant — the secret
+contents are the source of truth.
+
 To verify after login:
 
 ```bash
 rune get secret ghcr-credentials -n system
 ```
 
-To rotate the PAT:
+To rotate the PAT, the cleanest path is to manage the secret
+out-of-band and drop the `bootstrap`/`data` from the TF config
+once it exists:
+
+```bash
+rune cast secret ghcr-credentials -n system \
+  --from-literal username=$GHCR_USERNAME \
+  --from-literal password=$(gh auth token)
+```
+
+Or, to keep TF as the source of truth, leave `bootstrap = true`
++ `manage = "update"` and re-apply with the new `TF_VAR_ghcr_pat`:
 
 ```bash
 TF_VAR_ghcr_pat="$(gh auth token)" terraform apply
 ssh root@$(terraform output -raw ipv4_address) systemctl restart runed
-# manage = "update" causes runed to overwrite the secret on next boot
 ```
 
 ## Re-bootstrap

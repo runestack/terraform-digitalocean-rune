@@ -180,39 +180,48 @@ variable "acme_email" {
 # ---------------------------------------------------------------
 # Docker registry credentials (rendered into [[docker.registries]])
 #
-# Each entry maps to one block in the runefile. Two shapes are
-# supported:
+# Each entry maps to one block in the runefile. Three shapes are
+# supported, in order of preference:
 #
-#   1) Inline credentials (rendered as plaintext into the runefile).
-#      Simplest, but the credential lives in TF state + on the
-#      droplet's filesystem.
-#
-#        docker_registries = [
-#          {
-#            name     = "ghcr"
-#            registry = "ghcr.io"
-#            username = "my-github-user"
-#            password = var.ghcr_pat   # sensitive
-#          }
-#        ]
-#
-#   2) Stored as an encrypted Rune Secret (`fromSecret` reference).
-#      The runefile carries only the secret name; runed loads the
-#      cipher‑text from its Secret store at pull time.
-#
-#      Bootstrap mode (`bootstrap = true` + `data = { ... }`) lets
-#      runed create the Secret on first start using env‑expanded
-#      values. The env values reach runed via the EnvironmentFile
-#      written from `var.runed_environment` (see below).
+#   1) fromSecret reference, secret managed out-of-band.
+#      The secret is created+rotated via `rune cast secret` (or
+#      `rune admin secret create`); the runefile only carries
+#      the secret name. runed reads the secret at startup and
+#      INFERS auth_type from which keys it finds in the secret
+#      data — so auth_type / username / password / token / data
+#      should all be omitted in this shape.
 #
 #        docker_registries = [
 #          {
 #            name        = "ghcr"
 #            registry    = "ghcr.io"
 #            from_secret = "ghcr-credentials"   # ns defaults to "system"
-#            bootstrap   = true                  # create-or-update on startup
-#            manage      = "update"              # create | update | ignore
-#            immutable   = false
+#          }
+#        ]
+#
+#      Inferred mapping (see resolveRegistrySecret in runed):
+#        .dockerconfigjson    -> dockerconfigjson auth
+#        token | tok          -> token auth
+#        username + password  -> basic auth
+#        user + pass          -> basic auth
+#        awsAccessKeyId + ... -> ecr auth (region from runefile)
+#
+#   2) fromSecret + bootstrap (one-shot create on first start).
+#      Use when you want Terraform to be the source of truth for
+#      the credential AND have it stored as an encrypted Rune
+#      Secret. `data` is the seed payload written into the
+#      secret's data keys — runed picks them back up via the
+#      same inference table above. `data` is *not* a runtime
+#      override; once the secret exists, only the secret's
+#      contents matter.
+#
+#        docker_registries = [
+#          {
+#            name        = "ghcr"
+#            registry    = "ghcr.io"
+#            from_secret = "ghcr-credentials"
+#            bootstrap   = true                 # create-or-update on startup
+#            manage      = "update"             # create | update | ignore
 #            data = {
 #              username = "$${GHCR_USERNAME}"
 #              password = "$${GHCR_PAT}"
@@ -223,6 +232,24 @@ variable "acme_email" {
 #          GHCR_USERNAME = var.ghcr_username
 #          GHCR_PAT      = var.ghcr_pat   # sensitive
 #        }
+#
+#      The env values reach runed via the EnvironmentFile written
+#      from `var.runed_environment` (see below).
+#
+#   3) Inline credentials (rendered as plaintext into the runefile).
+#      Simplest, but the credential lives in TF state + on the
+#      droplet's filesystem. Prefer (1) or (2) for anything past
+#      a throwaway demo.
+#
+#        docker_registries = [
+#          {
+#            name      = "ghcr"
+#            registry  = "ghcr.io"
+#            auth_type = "basic"
+#            username  = "my-github-user"
+#            password  = var.ghcr_pat   # sensitive
+#          }
+#        ]
 #
 # For ECR pass auth_type = "ecr" with the AWS region; runed will
 # use its instance role / env credentials to mint short-lived
@@ -240,9 +267,14 @@ variable "docker_registries" {
     token     = optional(string, "")
     region    = optional(string, "")
 
-    # fromSecret mode (RUNE-018). When from_secret is non-empty the
-    # inline username/password/token fields are ignored; runed loads
-    # credentials from the named Rune Secret instead.
+    # fromSecret mode (RUNE-018). When from_secret is non-empty
+    # runed reads credentials from the named Rune Secret and
+    # infers auth_type from the secret's keys; the inline
+    # username/password/token/auth_type fields are ignored.
+    # Combine with bootstrap = true + a data map to have runed
+    # create-or-update the secret on first start (data values
+    # are env-expanded against /etc/rune/runed.env, see
+    # var.runed_environment).
     from_secret           = optional(string, "")
     from_secret_namespace = optional(string, "")
     bootstrap             = optional(bool, false)
@@ -250,7 +282,7 @@ variable "docker_registries" {
     immutable             = optional(bool, false)
     data                  = optional(map(string), {})
   }))
-  description = "Private Docker registries rendered into [[docker.registries]] in runefile.toml. Use auth_type = 'basic' (username + password / PAT), 'token' (bearer), or 'ecr' (AWS region). Set from_secret to load credentials from an encrypted Rune Secret instead of embedding them in the runefile; combine with bootstrap = true + data = { ... } to have runed create/update the Secret on first start using env-expanded values supplied via var.runed_environment."
+  description = "Private Docker registries rendered into [[docker.registries]] in runefile.toml. Three shapes: (1) from_secret reference to an externally-managed Rune Secret — runed infers auth_type from the secret's keys; (2) from_secret + bootstrap = true + data = { ... } — runed creates/updates the secret on first start using env-expanded values supplied via var.runed_environment; (3) inline username/password/token rendered as plaintext into the runefile (demo use only)."
   default     = []
   sensitive   = true
   validation {
@@ -300,6 +332,29 @@ variable "docker_registries" {
       r.from_secret != "" || r.from_secret_namespace == ""
     ])
     error_message = "docker_registries[*].from_secret_namespace can only be set when from_secret is also set."
+  }
+  # Inline credentials and fromSecret are mutually exclusive: when
+  # from_secret is set the inline username/password/token would be
+  # silently ignored by runed, which is a footgun. Reject the
+  # combination at plan time.
+  validation {
+    condition = alltrue([
+      for r in var.docker_registries :
+      r.from_secret == "" || (r.username == "" && r.password == "" && r.token == "")
+    ])
+    error_message = "docker_registries entries with from_secret set must NOT also set username/password/token — credentials live inside the Rune Secret. Use the data map (with bootstrap = true) to seed the secret instead."
+  }
+  # When from_secret is set without bootstrap, the secret must
+  # already exist. data is the bootstrap seed and is ignored at
+  # runtime, so requiring bootstrap = true alongside any data
+  # entries catches the common typo of "I set data but forgot
+  # bootstrap".
+  validation {
+    condition = alltrue([
+      for r in var.docker_registries :
+      length(r.data) == 0 || r.bootstrap
+    ])
+    error_message = "docker_registries[*].data is the bootstrap seed for fromSecret creation and is ignored at runtime. Set bootstrap = true if you want runed to create/update the secret, otherwise drop the data block and create the secret out-of-band with `rune cast secret`."
   }
 }
 
