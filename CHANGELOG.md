@@ -10,6 +10,21 @@ Breaking changes can land on any minor bump (`0.x.0`) until
 
 ## [Unreleased]
 
+## [0.0.7] - 2026-05-13
+
+### Fixed
+- Republish v0.0.6 under a fresh version. The Terraform Registry
+  indexed `v0.0.6` against an orphan commit SHA (a tag pushed before
+  a `git rebase` on `main` that left the originally-tagged commit
+  unreachable, then retagged). Downstream `terraform init -upgrade`
+  with `version = "0.0.6"` fails with `fatal: reference is not a
+  tree: <sha>` because the Registry's `x-terraform-get` redirect
+  points at a SHA that doesn't exist in the GitHub repo. Registry
+  tag→SHA mappings cache for 7 days (`max-age=604800`), so a resync
+  of `v0.0.6` would not propagate reliably to downstream clients.
+  v0.0.7 is byte-identical to v0.0.6's intended content; consumers
+  on `v0.0.6` should bump to `v0.0.7`.
+
 ## [0.0.6] - 2026-05-13
 
 ### Added
