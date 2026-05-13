@@ -79,14 +79,23 @@ rune login dev \
 
 Cloud-init runs **only on first boot**. Changing `var.rune_version`
 or any value rendered into `runefile.toml` after the droplet exists
-will NOT take effect on the running droplet. To roll a new config:
+will NOT take effect on the running droplet. To prevent accidental
+data loss, the droplet has `lifecycle { ignore_changes = [user_data] }`
+in [`main.tf`](main.tf) — bumping `var.rune_version` advances the
+variable in code without triggering a destroy/recreate. Existing
+droplets are upgraded out-of-band; new droplets created from scratch
+still pick up the current value.
 
-```bash
-terraform apply -replace=module.rune.digitalocean_droplet.this
-```
+### Upgrade paths
 
-A non-destructive in-place upgrade path is on the roadmap (see
-`CHANGELOG.md`).
+| Scenario | Path |
+| --- | --- |
+| Routine version bump on an existing droplet | Run [`scripts/upgrade-server.sh`](https://github.com/runestack/rune/blob/main/scripts/upgrade-server.sh) over SSH on the droplet. It swaps the binaries, re-applies `cap_net_bind_service`, restarts `runed`, and rolls back automatically on failure. Then bump `var.rune_version` in code so new droplets start at the same version. |
+| Force a fresh droplet on a new version | `terraform apply -replace=module.rune.digitalocean_droplet.this` — bypasses `ignore_changes` and recreates. **Wipes** `/var/lib/rune` (KEK, BadgerDB store) and any host-local volumes. |
+| Re-render `runefile.toml` only | Out-of-band: edit `/etc/rune/runefile.toml` on the host and `systemctl reload runed`. The TF-rendered template is only consulted on first boot. |
+
+See the [upgrade guide on docs.runestack.io](https://docs.runestack.io/operations/upgrades/)
+for the full operator walk-through.
 
 ## Bootstrap: re-rotate
 

@@ -59,6 +59,26 @@ resource "digitalocean_droplet" "this" {
   user_data = local.user_data
 
   tags = concat(["rune", "rune-${var.environment}"], var.tags)
+
+  lifecycle {
+    # Cloud-init runs at-most-once per droplet, so a changed user_data
+    # never re-executes on an existing host — but Terraform's default
+    # is to mark the droplet for REPLACEMENT (destroy + create) on any
+    # user_data drift. That would wipe /var/lib/rune (KEK, BadgerDB
+    # store) and any host-local volumes, which is almost never what an
+    # operator who just bumped `rune_version` actually wants.
+    #
+    # Ignoring user_data lets the variable advance freely in code
+    # (semantically tracking the desired install) while in-place
+    # upgrades happen out-of-band via `scripts/upgrade-server.sh`
+    # over SSH. New droplets created from scratch still pick up the
+    # current `rune_version` via the rendered template.
+    #
+    # To deliberately force a fresh droplet at a new version
+    # (greenfield / DR rebuild), use `terraform apply -replace=...`
+    # or taint the droplet — both bypass this ignore_changes.
+    ignore_changes = [user_data]
+  }
 }
 
 resource "digitalocean_firewall" "this" {

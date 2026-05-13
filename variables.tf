@@ -113,8 +113,8 @@ variable "extra_inbound_tcp_ports" {
 
 variable "rune_version" {
   type        = string
-  description = "Rune release tag passed to install-server.sh (e.g. 'v0.0.1-dev.35'). Pinned by default for reproducibility; bump per module release."
-  default     = "v0.0.1-dev.35"
+  description = "Rune release tag passed to install-server.sh on first boot (e.g. 'v0.0.1-dev.44'). The droplet ignores user_data changes after creation (see lifecycle block in main.tf), so bumping this variable affects fresh droplets only — for in-place upgrades on an existing droplet, run scripts/upgrade-server.sh from the rune repo over SSH."
+  default     = "v0.0.1-dev.44"
 }
 
 # ---------------------------------------------------------------
