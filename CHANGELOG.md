@@ -10,6 +10,33 @@ Breaking changes can land on any minor bump (`0.x.0`) until
 
 ## [Unreleased]
 
+## [0.0.6] - 2026-05-13
+
+### Added
+- `lifecycle { ignore_changes = [user_data] }` on the droplet. Cloud-init
+  is at-most-once so a changed `user_data` never re-runs on an existing
+  host, but Terraform's default behaviour on `user_data` drift was to
+  mark the droplet for **replacement** (destroy + create) — which would
+  wipe `/var/lib/rune` (KEK, BadgerDB store) and any host-local volumes.
+  Operators bumping `var.rune_version` to upgrade now get a no-op plan
+  on existing droplets; new droplets created from scratch still pick
+  up the rendered template. To deliberately force a fresh droplet at a
+  new version, use `terraform apply -replace=...`. See the new "Upgrade
+  paths" table in the README.
+
+### Changed
+- Bump default `rune_version` to `v0.0.1-dev.44`. Picks up the full
+  RUNE-121 init-step chain end-to-end (initSteps wire plumbing, init
+  step entrypoint semantics, inherited and case-insensitive
+  securityContext, main-container command/args propagation), plus
+  `scripts/upgrade-server.sh` which is now the canonical in-place
+  upgrade path — see the [Upgrades guide on
+  docs.runestack.io](https://docs.runestack.io/operations/upgrades/).
+- `var.rune_version` description now spells out its semantics under
+  `ignore_changes`: it sets the version a fresh droplet starts on, not
+  the version of an existing droplet. In-place upgrades happen
+  out-of-band via `upgrade-server.sh`.
+
 ## [0.0.5] - 2026-05-11
 
 ### Added
