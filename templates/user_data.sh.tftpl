@@ -56,7 +56,7 @@ Wants=network-online.target docker.service
 [Service]
 Type=simple
 EnvironmentFile=-/etc/rune/runed.env
-ExecStart=/usr/local/bin/runed --config /etc/rune/runefile.toml
+ExecStart=/usr/local/bin/runed
 Restart=on-failure
 RestartSec=5s
 LimitNOFILE=65536

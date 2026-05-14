@@ -10,6 +10,16 @@ Breaking changes can land on any minor bump (`0.x.0`) until
 
 ## [Unreleased]
 
+## [0.0.8] - 2026-05-14
+
+### Changed
+- Systemd unit no longer passes `--config /etc/rune/runefile.toml`.
+  runed v0.0.1-dev.50+ auto-discovers `/etc/rune/runefile.toml` on
+  startup, and dropping the flag means a redeployed unit picks up
+  the canonical path without per-host overrides. **Requires runed
+  v0.0.1-dev.50 or newer**; earlier versions stamped a stub
+  `runefile.yaml` into the data dir whenever `--config` was unset.
+
 ## [0.0.7] - 2026-05-13
 
 ### Fixed
