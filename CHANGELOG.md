@@ -10,6 +10,14 @@ Breaking changes can land on any minor bump (`0.x.0`) until
 
 ## [Unreleased]
 
+## [0.0.9] - 2026-05-15
+
+### Added
+- New `name` variable to override the droplet name. When unset, the
+  module keeps the previous `rune-<environment>` default, so existing
+  configs are unaffected. The custom name also flows into the
+  firewall name (`<name>-fw`) and the bootstrap CLI context fallback.
+
 ## [0.0.8] - 2026-05-14
 
 ### Changed

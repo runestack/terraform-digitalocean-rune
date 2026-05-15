@@ -21,7 +21,7 @@
 # ---------------------------------------------------------------
 
 locals {
-  bootstrap_context = var.bootstrap_context_name != "" ? var.bootstrap_context_name : "rune-${var.environment}"
+  bootstrap_context = var.bootstrap_context_name != "" ? var.bootstrap_context_name : local.name
 
   rune_login_command = format(
     "rune login %s --server %s:%d --token-file %s --default-namespace %s",

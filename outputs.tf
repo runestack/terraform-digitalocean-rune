@@ -4,7 +4,7 @@ output "droplet_id" {
 }
 
 output "droplet_name" {
-  description = "Droplet name (rune-<environment>)."
+  description = "Droplet name (var.name when set, otherwise 'rune-<environment>')."
   value       = digitalocean_droplet.this.name
 }
 

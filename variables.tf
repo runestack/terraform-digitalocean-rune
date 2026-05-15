@@ -15,6 +15,12 @@ variable "ssh_key_ids" {
 # Naming + placement
 # ---------------------------------------------------------------
 
+variable "name" {
+  type        = string
+  description = "Droplet name. When empty, defaults to 'rune-<environment>'. Also used as the prefix for the firewall ('<name>-fw') and the default bootstrap CLI context name."
+  default     = ""
+}
+
 variable "environment" {
   type        = string
   description = "Environment label used in the droplet name and tags (e.g. 'dev', 'prod')."

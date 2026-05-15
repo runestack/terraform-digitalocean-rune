@@ -11,7 +11,7 @@
 # ---------------------------------------------------------------
 
 locals {
-  name = "rune-${var.environment}"
+  name = var.name != "" ? var.name : "rune-${var.environment}"
 
   # Sorted KEY=VALUE lines for /etc/rune/runed.env. Sorting keeps
   # the rendered user_data stable across applies when var iteration
