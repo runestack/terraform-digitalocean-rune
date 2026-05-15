@@ -185,6 +185,7 @@ MIT — see [LICENSE](./LICENSE).
 | <a name="input_log_format"></a> [log\_format](#input\_log\_format) | Log format (text or json). | `string` | `"text"` | no |
 | <a name="input_log_level"></a> [log\_level](#input\_log\_level) | Log level (debug, info, warn, error). | `string` | `"info"` | no |
 | <a name="input_metrics_addr"></a> [metrics\_addr](#input\_metrics\_addr) | Address for the Prometheus metrics endpoint. Default binds to loopback only; expose by setting to ':9100' AND opening the port via extra\_inbound\_tcp\_ports. | `string` | `"127.0.0.1:9100"` | no |
+| <a name="input_name"></a> [name](#input\_name) | Droplet name. When empty, defaults to 'rune-<environment>'. Also used as the prefix for the firewall ('<name>-fw') and the default bootstrap CLI context name. | `string` | `""` | no |
 | <a name="input_node_role"></a> [node\_role](#input\_node\_role) | Rune node role. 'edge' nodes bind :80/:443 and run the ACME orchestrator; 'worker' nodes only run services. | `string` | `"edge"` | no |
 | <a name="input_project_id"></a> [project\_id](#input\_project\_id) | Optional DigitalOcean project ID to attach the droplet to. Empty disables attachment. | `string` | `""` | no |
 | <a name="input_region"></a> [region](#input\_region) | DigitalOcean region slug. | `string` | `"lon1"` | no |
@@ -199,7 +200,7 @@ MIT — see [LICENSE](./LICENSE).
 |------|-------------|
 | <a name="output_bootstrap_token_path"></a> [bootstrap\_token\_path](#output\_bootstrap\_token\_path) | Local path where the admin bootstrap token was written. Empty when bootstrap = false. |
 | <a name="output_droplet_id"></a> [droplet\_id](#output\_droplet\_id) | DigitalOcean droplet ID. |
-| <a name="output_droplet_name"></a> [droplet\_name](#output\_droplet\_name) | Droplet name (rune-<environment>). |
+| <a name="output_droplet_name"></a> [droplet\_name](#output\_droplet\_name) | Droplet name (var.name when set, otherwise 'rune-<environment>'). |
 | <a name="output_firewall_id"></a> [firewall\_id](#output\_firewall\_id) | Firewall ID (empty when create\_firewall = false). |
 | <a name="output_grpc_endpoint"></a> [grpc\_endpoint](#output\_grpc\_endpoint) | Address to point the rune CLI `--server` flag at. |
 | <a name="output_http_endpoint"></a> [http\_endpoint](#output\_http\_endpoint) | rune HTTP API base URL. |
